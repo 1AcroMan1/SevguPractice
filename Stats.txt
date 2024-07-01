@@ -1,0 +1,94 @@
+class MoneyHolder
+    {
+        float money;
+        public void DecreaseMoney(float val)
+        {
+            if (val >=0)
+            {
+                money -= val;
+            }
+        }
+    }
+    class Stats
+    {
+        private GetValuesFromDB db;
+        private UpgradeStat us;
+        //Класс где хранятся деньги. Вставить свой. Мб наследовать прокачку/магазины от этого класса + сделать метод внутри приватным.
+        private MoneyHolder mh;
+        public float Str { get; private set; }
+        public float MaxHp { get; private set; }
+        public float Stamina { get; private set; }
+        public void Upgrade(int statID, float Currentmoney, float statValue)
+        {
+            float? value = us.Upgrade(statID, Currentmoney, statValue, db, mh);
+            if(value!=null)
+            {
+                float val = float.Parse(value.ToString());
+                switch (statID)
+                {
+                    case 0:
+                            Str = val;
+                            break;
+                    case 1:
+                            MaxHp = val;
+                            break;
+                    case 2:                 
+                            Stamina = val;
+                            break;                
+                }
+            }
+        }
+    }
+    class GetValuesFromDB
+    {
+        public float DbGetCost()
+        {
+            //private Opendbcon
+            //int lvl = SELECT lvl FROM tablename WHERE id = smth AND statvalue = smth
+            //SELECT UpgradeCost FROM tablename WHERE id = smth AND lvl = lvl+1
+            //private Closedbcon
+            return 0;
+        }
+        private void DbSetStats(int statID, int lvl)
+        {
+            //private Opendbcon
+            //UPDATE tableID SET lvl = "'lvl'" WHERE statID = "'statID'"; 
+            //private Closedbcon
+        }
+        public float DbGetNextStatValue(int statID, float statValue)
+        {
+            //private Opendbcon
+            //int lvl = SELECT lvl FROM tablename WHERE id = smth AND statvalue = smth
+            //SELECT UpgradeCost FROM tablename WHERE id = smth AND lvl = lvl+1
+            //private Closedbcon
+            return 0;
+        }
+    }
+    class UpgradeStat
+    {
+        public float? Upgrade(int statID, float money, float statValue, GetValuesFromDB db, MoneyHolder mh)
+        {
+            float cost = GetCost(db);
+            if(money>cost)
+            {
+                try
+                {
+                    statValue = db.DbGetNextStatValue(statID, statValue);
+                    mh.DecreaseMoney(cost);
+                }
+                catch
+                {
+                    //Debug.Log("MaxLvlReached");
+                }
+            }
+            else
+            {
+                return null;
+            }
+            return statValue;
+        }
+        private float GetCost(GetValuesFromDB db)
+        {
+           return db.DbGetCost();
+        }
+    }
