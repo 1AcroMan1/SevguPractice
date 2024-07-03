@@ -1,94 +1,190 @@
-class MoneyHolder
+using System;
+using System.Collections.Generic;
+using System.Linq;
+namespace ForProj2
+{
+    class Program
     {
-        float money;
-        public void DecreaseMoney(float val)
+        static void Main(string[] args)
         {
-            if (val >=0)
-            {
-                money -= val;
-            }
+            Stats stats = new Stats();
+            MoneyHolder mh = new MoneyHolder();
+            mh.money = 10000;
+            Console.WriteLine(stats.MaxHp);
+            stats.Upgrade(1, mh);
+            Console.WriteLine(mh.money);
+            Console.WriteLine(stats.MaxHp);
         }
     }
     class Stats
     {
-        private GetValuesFromDB db;
-        private UpgradeStat us;
-        //Класс где хранятся деньги. Вставить свой. Мб наследовать прокачку/магазины от этого класса + сделать метод внутри приватным.
-        private MoneyHolder mh;
         public float Str { get; private set; }
         public float MaxHp { get; private set; }
         public float Stamina { get; private set; }
-        public void Upgrade(int statID, float Currentmoney, float statValue)
+        public float Mana { get; private set; }
+
+        public Stats()
         {
-            float? value = us.Upgrade(statID, Currentmoney, statValue, db, mh);
-            if(value!=null)
+            Str = 5;
+            MaxHp = 100;
+            Stamina = 5;
+            Mana = 5;
+        }
+        public void Upgrade(int statID, MoneyHolder mh)
+        {
+            StorableInfo storable = new StorableInfo();
+            storable.GenerateValsForAllStats();
+            UpgradeStat us = new UpgradeStat();
+            float statValue = 0;
+            switch (statID)
+            {
+                case 0:
+                    statValue = Str;
+                    break;
+                case 1:
+                    statValue = MaxHp;
+                    break;
+                case 2:
+                    statValue = Stamina;
+                    break;
+                case 3:
+                    statValue = Mana;
+                    break;
+            }
+
+            float? value = us.Upgrade(statID, statValue, mh, storable);
+            if (value != null)
             {
                 float val = float.Parse(value.ToString());
                 switch (statID)
                 {
                     case 0:
-                            Str = val;
-                            break;
+                        Str = val;
+                        break;
                     case 1:
-                            MaxHp = val;
-                            break;
-                    case 2:                 
-                            Stamina = val;
-                            break;                
+                        MaxHp = val;
+                        break;
+                    case 2:
+                        Stamina = val;
+                        break;
+                    case 3:
+                        Mana = val;
+                        break;
                 }
             }
         }
     }
-    class GetValuesFromDB
+
+    //class GetValuesFromDB
+    //{
+    //    public float DbGetCost()
+    //    {
+    //        // Opendbcon
+    //        //int lvl = SELECT lvl FROM tablename WHERE id = smth AND statvalue = smth
+    //        //SELECT UpgradeCost FROM tablename WHERE id = smth AND lvl = "'lvl+1'"
+    //        // Closedbcon
+    //        return 0;
+    //    }
+    //    private void DbSetStats(int statID, int lvl)
+    //    {
+    //        // Opendbcon
+    //        //UPDATE tableID SET lvl = "'lvl'" WHERE statID = "'statID'"; 
+    //        // Closedbcon
+    //    }
+    //    public float DbGetNextStatValue(int statID, float statValue)
+    //    {
+    //        // Opendbcon
+    //        //int lvl = SELECT lvl FROM tablename WHERE id = smth AND statvalue = smth
+    //        //SELECT UpgradeCost FROM tablename WHERE id = smth AND lvl = lvl+1
+    //        // Closedbcon
+    //        return 0;
+    //    }
+    //}
+
+    //FoundFromStorable - ужасная замена класса GetValuesFromDB
+    class FoundFromStorable
     {
-        public float DbGetCost()
+        public float GetCost(StorableInfo storable, float statValue, float statID)
         {
-            //private Opendbcon
-            //int lvl = SELECT lvl FROM tablename WHERE id = smth AND statvalue = smth
-            //SELECT UpgradeCost FROM tablename WHERE id = smth AND lvl = lvl+1
-            //private Closedbcon
-            return 0;
+            switch (statID)
+            {
+                case 0:
+                    {
+                        return storable.StrConsArr[storable.StrValueArr.IndexOf(statValue)];
+                    }
+                case 1:
+                    {
+                        return storable.HpConsArr[storable.HpValueArr.IndexOf(statValue)];
+                    }
+                case 2:
+                    {
+                        return storable.StaminaConsArr[storable.StaminaValueArr.IndexOf(statValue)];
+                    }
+                case 3:
+                    {
+                        return storable.ManaConsArr[storable.ManaValueArr.IndexOf(statValue)];
+                    }
+            }
+            return float.MaxValue;
         }
-        private void DbSetStats(int statID, int lvl)
+        public float GetNextStatValue(StorableInfo storable, float statValue, int statID)
         {
-            //private Opendbcon
-            //UPDATE tableID SET lvl = "'lvl'" WHERE statID = "'statID'"; 
-            //private Closedbcon
-        }
-        public float DbGetNextStatValue(int statID, float statValue)
-        {
-            //private Opendbcon
-            //int lvl = SELECT lvl FROM tablename WHERE id = smth AND statvalue = smth
-            //SELECT UpgradeCost FROM tablename WHERE id = smth AND lvl = lvl+1
-            //private Closedbcon
+            switch (statID)
+            {
+                case 0:
+                    {
+                        return storable.StrValueArr[storable.StrValueArr.IndexOf(statValue) + 1];
+                    }
+                case 1:
+                    {
+                        return storable.HpValueArr[storable.HpValueArr.IndexOf(statValue) + 1];
+                    }
+                case 2:
+                    {
+                        return storable.StaminaValueArr[storable.StaminaValueArr.IndexOf(statValue) + 1];
+                    }
+                case 3:
+                    {
+                        return storable.ManaValueArr[storable.ManaValueArr.IndexOf(statValue) + 1];
+                    }
+            }
             return 0;
         }
     }
-    class UpgradeStat
+class UpgradeStat
+{
+    public float? Upgrade(int statID, float statValue, MoneyHolder mh, StorableInfo storable)
     {
-        public float? Upgrade(int statID, float money, float statValue, GetValuesFromDB db, MoneyHolder mh)
+        FoundFromStorable fs = new FoundFromStorable();
+        float cost = fs.GetCost(storable, statValue, statID);
+        if (mh.money > cost)
         {
-            float cost = GetCost(db);
-            if(money>cost)
+            try
             {
-                try
-                {
-                    statValue = db.DbGetNextStatValue(statID, statValue);
-                    mh.DecreaseMoney(cost);
-                }
-                catch
-                {
-                    //Debug.Log("MaxLvlReached");
-                }
+                statValue = fs.GetNextStatValue(storable, statValue, statID);
+                mh.DecreaseMoney(cost);
+                //Console.WriteLine("upgrade sucssessfull");
             }
-            else
+            catch
             {
+                //Debug.Log("MaxLvlReached");
                 return null;
             }
-            return statValue;
         }
-        private float GetCost(GetValuesFromDB db)
+        else
         {
-           return db.DbGetCost();
+            return null;
         }
+        return statValue;
     }
+}
+    //class SkillTree
+    //{
+    //    List<GameObject> defaultObj;
+    //    List<GameObject> lockObj;
+    //    public void SaveTree()
+    //    {
+
+    //    }
+    //}
+}
