@@ -1,0 +1,17 @@
+public class SaveSystem 
+{
+    public static bool isSaved = false;
+    public static void SavePlayer(int heatpoints, int maxHP ,Vector3 position, Stat stat)
+    {
+        SaveSystem.isSaved = true;
+        BinaryFormatter formatter = new BinaryFormatter();
+        string path = Application.persistentDataPath + "/hero.save";
+        FileStream stream = new FileStream(path, FileMode.Create);
+        //Debug.Log(heatpoints + "хп");
+        //Debug.Log(position + "место");
+        PlayerData data = new PlayerData(heatpoints, maxHP, position, stat);
+
+        formatter.Serialize(stream, data);
+        stream.Close();
+        SaveIsSaved();
+    }
