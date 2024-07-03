@@ -142,16 +142,17 @@ class UpgradeStat
 }
 }
 
+class SkillTree
+{
+    List<GameObject> defaultObj;
+    List<GameObject> lockObj;
+    public void SaveTree()
+    {
 
+    }
+}
 
-
-
-
-
-
-
-
-    class StorableInfo
+class StorableInfo
     {
         //cons - consumable (потребление денег за прокачку)
         public List<float> StrConsArr { get; private set; } = new List<float>();
