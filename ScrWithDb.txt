@@ -1,0 +1,331 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Data.SqlClient;
+
+//При создании перса
+//--INSERT INTO HeroCurrentStats VALUES('Strength', 0, 5, 100);
+//--INSERT INTO HeroCurrentStats VALUES('MaxHP', 0, 100, 100);
+//--INSERT INTO HeroCurrentStats VALUES('Stamina', 0, 5, 100);
+//--INSERT INTO HeroCurrentStats VALUES('MaxMana', 0, 100, 100);
+
+namespace SevPractice
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            StorableInfo st = new StorableInfo();
+            st.GenerateAllValuesForDB();
+        }
+    }
+    class MoneyHolder
+    {
+        public float money { get; private set; }
+        public void DecreaseMoney(float cost)
+        {
+            if (money >= 0)
+            {
+                money -= cost;
+            }
+        }
+
+    }
+    class Stats
+    {
+        public float Str { get; private set; }
+        public float MaxHp { get; private set; }
+        public float Stamina { get; private set; }
+        public float Mana { get; private set; }
+
+        public void Upgrade(string skillName, float statValue, MoneyHolder mh)
+        {
+            UpgradeStat us = new UpgradeStat();
+            float? value = us.Upgrade(skillName, statValue, mh);
+            if (value != null)
+            {
+                float val = float.Parse(value.ToString());
+                switch (skillName)
+                {
+                    case "Str":
+                        Str = val;
+                        break;
+                    case "MaxHP":
+                        MaxHp = val;
+                        break;
+                    case "Stamina":
+                        Stamina = val;
+                        break;
+                    case "Mana":
+                        Mana = val;
+                        break;
+                }
+            }
+        }
+        public void UpdateStats()
+        {
+
+        }
+    }
+
+    class GetValuesFromDB
+    {
+        public float DbGetCost(string skillName, float statValue)
+        {
+            int lvl = int.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"'skillLvl'"} FROM {"'HeroStats'"} WHERE {"'skillName'"} = {skillName} AND {"'statvalue'"} = {statValue}"));
+            float cost = float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"'UpgradeCost'"} FROM {"'HeroStats'"} WHERE {"'skillName'"} = {skillName} AND {"'skillLvl'"} = {lvl+1}"));
+            return cost;
+        }
+        private void DbSetStats(string skillName, int lvl, float value)
+        {
+            DbHelper.ExecuteWithoutAnswer($"UPDATE {"'HeroCurrentStats'"} SET {"'skillLvl'"} = {lvl}, {"'statvalue'"} = {value} WHERE {"'skillName'"} = {skillName}"); 
+        }
+        public float DbGetNextStatValue(string skillName, float statValue)
+        {
+            int lvl= int.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"'skillLvl'"} FROM {"'HeroCurrentStats'"} WHERE {"'skillName'"} = {skillName} AND {"'statvalue'"} = {statValue}"));
+            float nextval = float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"'statvalue'"} FROM {"'HeroCurrentStats'"} WHERE {"'skillName'"} = {skillName} AND {"'skillLvl'"} = {lvl+1}"));
+            DbSetStats(skillName,lvl+1,nextval);
+            return nextval;
+        }
+        public List<string> DbGetHeroStats()
+        {
+
+            return null;
+        }
+    }
+    class UpgradeStat
+    {
+        public float? Upgrade(string skillName, float statValue, MoneyHolder mh)
+        {
+            GetValuesFromDB db = new GetValuesFromDB();
+            float cost = db.DbGetCost(skillName, statValue);
+            if (mh.money > cost)
+            {
+                try
+                {
+                    statValue = db.DbGetNextStatValue(skillName, statValue);
+                    mh.DecreaseMoney(cost);
+                    Console.WriteLine("upgrade sucssessfull");
+                }
+                catch
+                {
+                    //Debug.Log("MaxLvlReached");
+                    return null;
+                }
+            }
+            else
+            {
+                return null;
+            }
+            return statValue;
+        }
+    }
+
+    //class SkillTree
+    //{
+    //    List<GameObject> defaultObj;
+    //    List<GameObject> lockObj;
+    //    public void SaveTree()
+    //    {
+
+    //    }
+    //}
+}
+
+
+
+
+
+using System;
+using System.Collections.Generic;
+using System.Data.SqlClient;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace SevPractice
+{
+    public static class DbHelper
+    {
+        private static string connection = GetConnectionString();
+        static private string GetConnectionString()
+        {
+            //local
+            //return @"Data Source = (local)\SQLEXPRESS;Initial Catalog = SpaceDataBase; Integrated Security = True; TrustServerCertificate = True";
+            //server
+            return @"Data Source=DESKTOP-9T0H6F4\SQLEXPRESS;Initial Catalog=SevguPractice;Integrated Security=True;Encrypt=True;TrustServerCertificate=True";
+        }
+        public static void ExecuteWithoutAnswer(string str)
+        {
+            using (SqlConnection conn = new SqlConnection(connection))
+            {
+                conn.Open();
+                SqlCommand cmd = new SqlCommand(str, conn);
+                try
+                {
+                    cmd.ExecuteNonQuery();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex);
+                }
+                conn.Close();
+            }
+        }
+        public static List<object> ExecuteWithAnswer(string str)
+        {
+            using (SqlConnection conn = new SqlConnection(connection))
+            {
+                conn.Open();
+                List<object> result = new List<object>();
+                SqlCommand cmd = new SqlCommand(str, conn);
+                try
+                {
+                    SqlDataReader reader = cmd.ExecuteReader();
+                    if (reader.HasRows)
+                    {
+                        while (reader.Read())
+                        {
+                            result.Add(reader.GetValue(0));
+                            result.Add(reader.GetValue(1));
+                            result.Add(reader.GetValue(2));
+                            result.Add(reader.GetValue(3));
+                            result.Add(reader.GetValue(4));
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine(ex);
+                }
+                conn.Close();
+                return result;
+            }
+        }
+        public static string ExecuteQueryWithAnswer(string query)
+        {
+            using (SqlConnection conn = new SqlConnection(connection))
+            {
+                conn.Open();
+                SqlCommand cmd = new SqlCommand(query, conn);
+                var answer = cmd.ExecuteScalar();
+                conn.Close();
+
+                if (answer != null) return answer.ToString();
+                else return null;
+            }
+        }
+    }
+
+}
+
+
+
+
+
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace SevPractice
+{
+    class StorableInfo
+    {
+        //cons - consumable (потребление денег за прокачку)
+        public List<float> StrConsArr { get; private set; } = new List<float>();
+        public List<float> StrValueArr { get; private set; } = new List<float>();
+
+        public List<float> HpConsArr { get; private set; } = new List<float>();
+        public List<float> HpValueArr { get; private set; } = new List<float>();
+
+        public List<float> StaminaConsArr { get; private set; } = new List<float>();
+        public List<float> StaminaValueArr { get; private set; } = new List<float>();
+
+        public List<float> ManaConsArr { get; private set; } = new List<float>();
+        public List<float> ManaValueArr { get; private set; } = new List<float>();
+        public void GenerateValsForAllStats()
+        {
+            List<List<float>> StrHar = new List<List<float>>();
+            StrHar = GenerateValues(StrConsArr, StrValueArr, 100, 5, 10, 1, 100);
+            StrConsArr = StrHar.First();
+            StrValueArr = StrHar.Last();
+
+            List<List<float>> HpHar = new List<List<float>>();
+            HpHar = GenerateValues(HpConsArr, HpValueArr, 100, 100, 10, 10, 100);
+            HpConsArr = HpHar.First();
+            HpValueArr = HpHar.Last();
+
+            List<List<float>> StaminaHar = new List<List<float>>();
+            StaminaHar = GenerateValues(StaminaConsArr, StaminaValueArr, 100, 5, 10, 1, 100);
+            StaminaConsArr = StaminaHar.First();
+            StaminaValueArr = StaminaHar.Last();
+
+            List<List<float>> ManaHar = new List<List<float>>();
+            ManaHar = GenerateValues(ManaConsArr, ManaValueArr, 100, 5, 10, 1, 100);
+            ManaConsArr = ManaHar.First();
+            ManaValueArr = ManaHar.Last();
+        }
+        public void GetValuesFromFile()
+        {
+
+        }
+
+        public void GenerateAllValuesForDB()
+        {
+            GenerateValuesForDB("Strength", 100, 5, 10, 1, 100);
+            GenerateValuesForDB("MaxHP", 100, 100, 10, 10, 100);
+            GenerateValuesForDB("Stamina", 100, 5, 10, 1, 100);
+            GenerateValuesForDB("MaxMana", 100, 100, 10, 10, 100);
+        }
+
+        public void GenerateValuesForDB(string skillName, float BaseCons, float BaseValue, float consIncrease, float valueIncrease, float MaxLvl)
+        {
+            for (int i = 0; i < MaxLvl; i++)
+            {
+                if (i == 0)
+                {
+                    DbHelper.ExecuteWithoutAnswer($"INSERT INTO HeroStats VALUES('{skillName}', {i}, {BaseValue}, {BaseCons})");
+                }
+                else
+                {
+                    float curCons = float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT UpgradeCost FROM HeroStats WHERE skillLvl = {i - 1} AND skillName = '{skillName}'"));
+                    float curValue = float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT statvalue FROM HeroStats WHERE skillLvl = {i - 1} AND skillName = '{skillName}'"));
+                    float cons = curCons + (curCons * consIncrease / 100);
+                    float value = curValue + valueIncrease;
+                    string consStr = cons.ToString(CultureInfo.InvariantCulture);
+                    string valueStr = value.ToString(CultureInfo.InvariantCulture);
+                    DbHelper.ExecuteWithoutAnswer($"INSERT INTO HeroStats VALUES('{skillName}', {i}, {valueStr}, {consStr})");
+                }
+            }
+        }
+
+        //consIncrease - увеличение стоимости в %
+        //valueIncrease - увеличение значения статистики в еденицах
+        private List<List<float>> GenerateValues(List<float> cons, List<float> value, float BaseCons, float BaseValue, float consIncrease, float valueIncrease, float MaxLvl)
+        {
+            List<List<float>> Har = new List<List<float>>();
+            for (int i = 0; i < MaxLvl; i++)
+            {
+                if (i == 0)
+                {
+                    cons.Add(BaseCons);
+                    value.Add(BaseValue);
+                }
+                else
+                {
+                    cons.Add(cons.Last() * consIncrease / 100);
+                    value.Add(value.Last() + valueIncrease);
+                }
+            }
+            Har.Add(cons);
+            Har.Add(value);
+            return Har;
+        }
+    }
+}
+
+
+
