@@ -1,9 +1,8 @@
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Data.SqlClient;
+using SevPractice;
 using System.Globalization;
-namespace ForProj2
+
+//CREATE DATABASE SevguPracrice
+namespace SevPractice
 {
     class Program
     {
@@ -11,6 +10,12 @@ namespace ForProj2
         {
             StorableInfo st = new StorableInfo();
             st.GenerateAllValuesForDB();
+            Stats stats = new Stats();
+            stats.UpdateStats();
+            MoneyHolder moneyHolder = new MoneyHolder();
+            moneyHolder.money = 10000;
+            stats.Upgrade("Strength", moneyHolder);
+            Console.WriteLine($"{stats.Strength}, {moneyHolder.money}");
             //Test t = new Test();
             //t.test();
         }
@@ -36,7 +41,7 @@ namespace ForProj2
     //}
     class MoneyHolder
     {
-        public float money { get; private set; }
+        public float money { get; set; }
         public void DecreaseMoney(float cost)
         {
             if (money >= 0)
@@ -54,7 +59,7 @@ namespace ForProj2
         public float CritChance { get; private set; }
         public float CritDamage { get; private set; }
         public float Speed { get; private set; }
-        public float Intelegence { get; private set; }
+        public float Intellegence { get; private set; }
         public float Haste { get; private set; }
 
 
@@ -79,20 +84,29 @@ namespace ForProj2
                 CritChance = dic["CritChance"];
                 CritDamage = dic["CritDamage"];
                 Speed = dic["Speed"];
-                Intelegence = dic["Intelegence"];
+                Intellegence = dic["Intellegence"];
                 Haste = dic["Haste"];
+                Console.WriteLine("Table cur is fine");
             }
             catch
             {
-                DbHelper.ExecuteWithoutAnswer($"INSERT INTO HeroCurrentStats VALUES({"'Strength'"}, 0, 5, 100)");
-                DbHelper.ExecuteWithoutAnswer($"INSERT INTO HeroCurrentStats VALUES({"'MaxHp'"}, 0, 100, 100)");
-                DbHelper.ExecuteWithoutAnswer($"INSERT INTO HeroCurrentStats VALUES({"'MaxStamina'"}, 0, 100, 100)");
-                DbHelper.ExecuteWithoutAnswer($"INSERT INTO HeroCurrentStats VALUES({"'MaxMana'"}, 0, 100, 100)");
-                DbHelper.ExecuteWithoutAnswer($"INSERT INTO HeroCurrentStats VALUES({"'CritChance'"}, 0, 0.1, 100)");
-                DbHelper.ExecuteWithoutAnswer($"INSERT INTO HeroCurrentStats VALUES({"'CritDamage'"}, 0, 1.5, 100)");
-                DbHelper.ExecuteWithoutAnswer($"INSERT INTO HeroCurrentStats VALUES({"'Speed'"}, 0, 3, 100)");
-                DbHelper.ExecuteWithoutAnswer($"INSERT INTO HeroCurrentStats VALUES({"'Intelegence'"}, 0, 5, 100)");
-                DbHelper.ExecuteWithoutAnswer($"INSERT INTO HeroCurrentStats VALUES({"'Haste'"}, 0, 5, 100)");
+                try
+                {
+                    DbHelper.ExecuteWithoutAnswer("DROP TABLE HeroCurrentStats");
+                    Console.WriteLine("Table cur deleted");
+                }
+                catch {}//Таблицы не существует, нечего удалять и делать в кэтче нечего тоже
+                Console.WriteLine("Table cur not exist");
+                DbHelper.ExecuteWithoutAnswer("CREATE TABLE HeroCurrentStats (skillName VARCHAR(128), skillLvl int, statvalue float) ");
+                DbHelper.ExecuteWithoutAnswer($"INSERT INTO HeroCurrentStats VALUES({"'Strength'"}, 0, 5)");
+                DbHelper.ExecuteWithoutAnswer($"INSERT INTO HeroCurrentStats VALUES({"'MaxHp'"}, 0, 100)");
+                DbHelper.ExecuteWithoutAnswer($"INSERT INTO HeroCurrentStats VALUES({"'MaxStamina'"}, 0, 100)");
+                DbHelper.ExecuteWithoutAnswer($"INSERT INTO HeroCurrentStats VALUES({"'MaxMana'"}, 0, 100)");
+                DbHelper.ExecuteWithoutAnswer($"INSERT INTO HeroCurrentStats VALUES({"'CritChance'"}, 0, 0.1)");
+                DbHelper.ExecuteWithoutAnswer($"INSERT INTO HeroCurrentStats VALUES({"'CritDamage'"}, 0, 1.5)");
+                DbHelper.ExecuteWithoutAnswer($"INSERT INTO HeroCurrentStats VALUES({"'Speed'"}, 0, 3)");
+                DbHelper.ExecuteWithoutAnswer($"INSERT INTO HeroCurrentStats VALUES({"'Intellegence'"}, 0, 5)");
+                DbHelper.ExecuteWithoutAnswer($"INSERT INTO HeroCurrentStats VALUES({"'Haste'"}, 0, 5)");
             }
         }
     }
@@ -101,38 +115,38 @@ namespace ForProj2
     {
         public float DbGetCost(string skillName, float statValue)
         {
-            int lvl = int.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"'skillLvl'"} FROM {"'HeroStats'"} WHERE {"'skillName'"} = {skillName} AND {"'statvalue'"} = {statValue}"));
-            float cost = float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"'UpgradeCost'"} FROM {"'HeroStats'"} WHERE {"'skillName'"} = {skillName} AND {"'skillLvl'"} = {lvl + 1}"));
+            int lvl = int.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"skillLvl"} FROM {"HeroStats"} WHERE {"skillName"} = '{skillName}' AND {"statvalue"} = {statValue.ToString(CultureInfo.InvariantCulture)}"));
+            float cost = float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"UpgradeCost"} FROM {"HeroStats"} WHERE {"skillName"} = '{skillName}' AND {"skillLvl"} = {lvl + 1}"));
             return cost;
         }
         private void DbSetStats(string skillName, int lvl, float value)
         {
             string valueToStr = value.ToString(CultureInfo.InvariantCulture);
-            DbHelper.ExecuteWithoutAnswer($"UPDATE {"'HeroCurrentStats'"} SET {"'skillLvl'"} = {lvl}, {"'statvalue'"} = {valueToStr} WHERE {"'skillName'"} = {skillName}");
+            DbHelper.ExecuteWithoutAnswer($"UPDATE {"HeroCurrentStats"} SET {"skillLvl"} = {lvl}, {"statvalue"} = {valueToStr.ToString(CultureInfo.InvariantCulture)} WHERE {"skillName"} = '{skillName}'");
         }
         public float DbGetNextStatValue(string skillName, float statValue)
         {
-            int lvl = int.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"'skillLvl'"} FROM {"'HeroStats'"} WHERE {"'skillName'"} = {skillName} AND {"'statvalue'"} = {statValue}"));
-            float nextval = float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"'statvalue'"} FROM {"'HeroStats'"} WHERE {"'skillName'"} = {skillName} AND {"'skillLvl'"} = {lvl + 1}"));
+            int lvl = int.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"skillLvl"} FROM {"HeroStats"} WHERE {"skillName"} = '{skillName}' AND {"statvalue"} = {statValue.ToString(CultureInfo.InvariantCulture)}"));
+            float nextval = float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroStats"} WHERE {"skillName"} = '{skillName}' AND {"skillLvl"} = {lvl + 1}"));
             DbSetStats(skillName, lvl + 1, nextval);
             return nextval;
         }
         public float DbGetCurrentStatValue(string skillName)
         {
-            return float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"'statvalue'"} FROM {"'HeroCurrentStats'"} WHERE {"'skillName'"} = {skillName}"));
+            return float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE {"skillName"} = '{skillName}'"));
         }
         public Dictionary<string, float> DbGetHeroStats()
         {
             Dictionary<string, float> dict = new Dictionary<string, float>();
-            dict.Add("Strength", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"'statvalue'"} FROM {"'HeroCurrentStats'"} WHERE {"'skillName'"} = {"'Strengtch'"}")));
-            dict.Add("MaxHP", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"'statvalue'"} FROM {"'HeroCurrentStats'"} WHERE {"'skillName'"} = {"'MaxHP'"}")));
-            dict.Add("MaxStamina", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"'statvalue'"} FROM {"'HeroCurrentStats'"} WHERE {"'skillName'"} = {"'MaxStamina'"}")));
-            dict.Add("MaxMana", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"'statvalue'"} FROM {"'HeroCurrentStats'"} WHERE {"'skillName'"} = {"'MaxMana'"}")));
-            dict.Add("CritChance", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"'statvalue'"} FROM {"'HeroCurrentStats'"} WHERE {"'skillName'"} = {"'CritChance'"}")));
-            dict.Add("CritDamage", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"'statvalue'"} FROM {"'HeroCurrentStats'"} WHERE {"'skillName'"} = {"'CritDamage'"}")));
-            dict.Add("Speed", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"'statvalue'"} FROM {"'HeroCurrentStats'"} WHERE {"'skillName'"} = {"'Speed'"}")));
-            dict.Add("Intellegence", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"'statvalue'"} FROM {"'HeroCurrentStats'"} WHERE {"'skillName'"} = {"'Intellegence'"}")));
-            dict.Add("Haste", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"'statvalue'"} FROM {"'HeroCurrentStats'"} WHERE {"'skillName'"} = {"'Haste'"}")));
+            dict.Add("Strength", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE {"skillName"} = {"'Strength'"}")));
+            dict.Add("MaxHp", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE {"skillName"} = {"'MaxHp'"}")));
+            dict.Add("MaxStamina", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE {"skillName"} = {"'MaxStamina'"}")));
+            dict.Add("MaxMana", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE {"skillName"} = {"'MaxMana'"}")));
+            dict.Add("CritChance", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE {"skillName"} = {"'CritChance'"}")));
+            dict.Add("CritDamage", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE {"skillName   "} = {"'CritDamage'"}")));
+            dict.Add("Speed", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE {"skillName"} = {"'Speed'"}")));
+            dict.Add("Intellegence", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE {"skillName"} = {"'Intellegence'"}")));
+            dict.Add("Haste", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE {"skillName"} = {"'Haste'"}")));
             return dict;
         }
     }
@@ -159,7 +173,6 @@ namespace ForProj2
     }
 }
 
-
 using System;
 using System.Collections.Generic;
 using System.Data.SqlClient;
@@ -167,7 +180,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ForProj2
+namespace SevPractice
 {
     public static class DbHelper
     {
@@ -243,7 +256,7 @@ namespace ForProj2
 
 }
 
-
+using SevPractice;
 using System;
 using System.Collections.Generic;
 using System.Globalization;
@@ -251,13 +264,19 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace ForProj2
+namespace SevPractice
 {
     class StorableInfo
-    {      
+    {
         //Вызывать это для генерации в бд
         public void GenerateAllValuesForDB()
         {
+            try
+            {
+                DbHelper.ExecuteWithoutAnswer("DROP TABLE HeroStats");
+            }
+            catch { }
+            DbHelper.ExecuteWithoutAnswer("CREATE TABLE HeroStats(skillName VARCHAR (128), skillLvl int, statvalue float, UpgradeCost float)");
             GenerateValuesForDB("Strength", 100, 5, 10, 1, 50);
             GenerateValuesForDB("MaxHP", 100, 100, 10, 10, 50);
             GenerateValuesForDB("MaxStamina", 100, 5, 10, 1, 50);
@@ -275,7 +294,9 @@ namespace ForProj2
             {
                 if (i == 0)
                 {
-                    DbHelper.ExecuteWithoutAnswer($"INSERT INTO HeroStats VALUES('{skillName}', {i}, {BaseValue}, {BaseCons})");
+                    string BaseValues = BaseValue.ToString(CultureInfo.InvariantCulture);
+                    string BaseConss = BaseCons.ToString(CultureInfo.InvariantCulture);
+                    DbHelper.ExecuteWithoutAnswer($"INSERT INTO HeroStats VALUES('{skillName}', {i}, {BaseValues}, {BaseConss})");
                 }
                 else
                 {
@@ -283,7 +304,7 @@ namespace ForProj2
                     float curValue = float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT statvalue FROM HeroStats WHERE skillLvl = {i - 1} AND skillName = '{skillName}'"));
                     //Тут формулы
                     float cons = curCons + (curCons * consIncrease / 100);
-                    float value = curValue + valueIncrease-(i*BaseValue/80);
+                    float value = curValue + valueIncrease - (i * BaseValue / 400);
                     //
                     string consStr = cons.ToString(CultureInfo.InvariantCulture);
                     string valueStr = value.ToString(CultureInfo.InvariantCulture);
