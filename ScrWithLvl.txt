@@ -192,16 +192,21 @@ namespace ForProj2
         public Dictionary<string, float> DbGetHeroStats()
         {
             Dictionary<string, float> dict = new Dictionary<string, float>();
-            dict.Add("Strength", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE {"skillName"} = {"'Strength'"}")));
-            dict.Add("MaxHp", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE {"skillName"} = {"'MaxHp'"}")));
-            dict.Add("MaxStamina", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE {"skillName"} = {"'MaxStamina'"}")));
-            dict.Add("MaxMana", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE {"skillName"} = {"'MaxMana'"}")));
-            dict.Add("CritChance", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE {"skillName"} = {"'CritChance'"}")));
-            dict.Add("CritDamage", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE {"skillName   "} = {"'CritDamage'"}")));
-            dict.Add("Speed", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE {"skillName"} = {"'Speed'"}")));
-            dict.Add("Intellegence", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE {"skillName"} = {"'Intellegence'"}")));
-            dict.Add("Haste", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE {"skillName"} = {"'Haste'"}")));
-            dict.Add("Lvl", int.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE { "skillName"} = { "'Lvl'"}")));
+            List<string> skillNames = new List<string>() { "Strength", "MaxHp", "MaxStamina", "MaxMana", "CritChance", "CritDamage", "Speed", "Intellegence", "Haste", "Lvl" };
+            for (int i = 0; i < skillNames.Count; i++)
+            {
+                dict.Add($"'{skillNames[i]}'", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE {"skillName"} = '{skillNames[i]}'")));
+            }
+            //dict.Add("Strength", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE {"skillName"} = {"'Strength'"}")));
+            //dict.Add("MaxHp", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE {"skillName"} = {"'MaxHp'"}")));
+            //dict.Add("MaxStamina", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE {"skillName"} = {"'MaxStamina'"}")));
+            //dict.Add("MaxMana", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE {"skillName"} = {"'MaxMana'"}")));
+            //dict.Add("CritChance", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE {"skillName"} = {"'CritChance'"}")));
+            //dict.Add("CritDamage", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE {"skillName   "} = {"'CritDamage'"}")));
+            //dict.Add("Speed", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE {"skillName"} = {"'Speed'"}")));
+            //dict.Add("Intellegence", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE {"skillName"} = {"'Intellegence'"}")));
+            //dict.Add("Haste", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE {"skillName"} = {"'Haste'"}")));
+            //dict.Add("Lvl", int.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE { "skillName"} = { "'Lvl'"}")));
             return dict;
         }
     }
@@ -231,7 +236,6 @@ namespace ForProj2
         }
     }
 }
-
 
 
 
