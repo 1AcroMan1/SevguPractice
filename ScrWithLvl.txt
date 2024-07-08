@@ -1,0 +1,304 @@
+using System.Globalization;
+using System;
+using System.Collections.Generic;
+
+//CREATE DATABASE SevguPracrice
+namespace ForProj2
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            StorableInfo st = new StorableInfo();
+            st.GenerateAllValuesForDB();
+            Stats stats = new Stats();
+            stats.UpdateStats();
+            MoneyHolder moneyHolder = new MoneyHolder();
+            moneyHolder.exp = 10000;
+            //stats.Upgrade("Strength", moneyHolder);
+            Console.WriteLine($"{stats.Strength}, {moneyHolder.exp}");
+            //Test t = new Test();
+            //t.test();
+        }
+    }
+    //class Test
+    //{
+    //    public void test()
+    //    {
+    //        List<float> value = new List<float>();
+    //        for (int i = 0; i < 50; i++)
+    //        {
+    //            if (i == 0)
+    //            {
+    //                value.Add(100);
+    //            }
+    //            else
+    //            {
+    //                value.Add(value[i - 1] + (100 - (i*100 / 80)));
+    //                Console.WriteLine($"{ value[i]}, lvl: {i}");
+    //            }
+    //        }
+    //    }
+    //}
+    class MoneyHolder
+    {
+        public float exp { get; set; }
+        private float recognizedExp;
+        public void DecreaseMoney(float cost)
+        {
+            if (exp >= 0)
+            {
+                exp -= cost;
+            }
+        }
+        public void RecognizeAndReturn(bool RecOrRet)
+        {
+            if(RecOrRet)
+            {
+                exp = recognizedExp;
+                recognizedExp = 0;
+            }
+            else
+            {
+                recognizedExp = exp;
+            }
+        }
+    }
+    class Stats
+    {
+        public float Lvl { get; private set; }
+        public float Strength { get; private set; }
+        public float MaxHp { get; private set; }
+        public float MaxStamina { get; private set; }
+        public float MaxMana { get; private set; }
+        public float CritChance { get; private set; }
+        public float CritDamage { get; private set; }
+        public float Speed { get; private set; }
+        public float Intellegence { get; private set; }
+        public float Haste { get; private set; }
+        private List<float> RecognizedStats;
+
+        //2 этап - вызов всех улучшений по клику по кнопке
+        public void Upgrade(string skillName, MoneyHolder mh)
+        {
+            GetValuesFromDB db = new GetValuesFromDB();
+            UpgradeStat us = new UpgradeStat();
+            us.Upgrade(skillName, db.DbGetCurrentStatValue(skillName), mh, db,  Lvl);
+            UpdateStats();
+        }
+        private void RecognizeAndReturn(bool RecOrRet)
+        {
+            if (RecOrRet)
+            {
+                List<string> str = new List<string>() { "Strength", "MaxHp", "MaxStamina", "MaxMana", "CritChance", "CritDamage", "Speed", "Intellegence", "Haste", "Lvl" };
+                GetValuesFromDB db = new GetValuesFromDB();
+                for (int i=0; i<RecognizedStats.Count;i++)
+                {
+                    db.DbSetStats(str[i], RecognizedStats[i]);
+                }
+            }
+            else
+            {
+                RecognizedStats = new List<float>() { Strength, MaxHp, MaxStamina, MaxMana, CritChance, CritDamage, Speed, Intellegence, Haste, Lvl };
+            }
+        }
+        //1 этап - вызов этой штуки при начале улучшения
+        public void InitializeFalseUpgrade(MoneyHolder mh)
+        {
+            mh.RecognizeAndReturn(false);
+            RecognizeAndReturn(false);
+        }
+        //3 этап - вызов этой штуки при клике на кнопку подтвердить или отклонить улучшение. bool accepted - true, если пользователь согласен на улучшение
+        public void AcceptOrDenyFalseUpgrade(bool accepted, MoneyHolder mh)
+        {
+            if (!accepted)
+            {
+                mh.RecognizeAndReturn(true);
+                RecognizeAndReturn(true);
+            }
+        }
+        public void UpdateStats()
+        {
+            try
+            {
+                GetValuesFromDB db = new GetValuesFromDB();
+                Dictionary<string, float> dic = db.DbGetHeroStats();
+                Strength = dic["Strength"];
+                MaxHp = dic["MaxHp"];
+                MaxStamina = dic["MaxStamina"];
+                MaxMana = dic["MaxMana"];
+                CritChance = dic["CritChance"];
+                CritDamage = dic["CritDamage"];
+                Speed = dic["Speed"];
+                Intellegence = dic["Intellegence"];
+                Haste = dic["Haste"];
+                //Добавил лвл
+                Lvl = dic["Lvl"];
+                Console.WriteLine("Table cur is fine");
+            }
+            catch
+            {
+                try
+                {
+                    DbHelper.ExecuteWithoutAnswer("DROP TABLE HeroCurrentStats");
+                    Console.WriteLine("Table cur deleted");
+                }
+                catch { }//Таблицы не существует, нечего удалять и делать в кэтче нечего тоже
+                Console.WriteLine("Table cur not exist");
+                DbHelper.ExecuteWithoutAnswer("CREATE TABLE HeroCurrentStats (skillName VARCHAR(128), skillLvl int, statvalue float) ");
+                DbHelper.ExecuteWithoutAnswer($"INSERT INTO HeroCurrentStats VALUES({"'Strength'"}, 0, 5)");
+                DbHelper.ExecuteWithoutAnswer($"INSERT INTO HeroCurrentStats VALUES({"'MaxHp'"}, 0, 100)");
+                DbHelper.ExecuteWithoutAnswer($"INSERT INTO HeroCurrentStats VALUES({"'MaxStamina'"}, 0, 100)");
+                DbHelper.ExecuteWithoutAnswer($"INSERT INTO HeroCurrentStats VALUES({"'MaxMana'"}, 0, 100)");
+                DbHelper.ExecuteWithoutAnswer($"INSERT INTO HeroCurrentStats VALUES({"'CritChance'"}, 0, 0.1)");
+                DbHelper.ExecuteWithoutAnswer($"INSERT INTO HeroCurrentStats VALUES({"'CritDamage'"}, 0, 1.5)");
+                DbHelper.ExecuteWithoutAnswer($"INSERT INTO HeroCurrentStats VALUES({"'Speed'"}, 0, 3)");
+                DbHelper.ExecuteWithoutAnswer($"INSERT INTO HeroCurrentStats VALUES({"'Intellegence'"}, 0, 5)");
+                DbHelper.ExecuteWithoutAnswer($"INSERT INTO HeroCurrentStats VALUES({"'Haste'"}, 0, 5)");
+                //В дб также добавил лвл
+                DbHelper.ExecuteWithoutAnswer($"INSERT INTO HeroCurrentStats VALUES({"'Lvl'"}, 0, 0)");
+            }
+        }
+    }
+
+    class GetValuesFromDB
+    {
+        public float DbGetCost(float lvl)
+        {
+            float cost = float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"UpgradeCost"} FROM {"HeroLvl"} WHERE {"Lvl"} = {lvl + 1}"));
+            return cost;
+        }
+        private void DbSetStats(string skillName, int lvl, float HeroLvl, float value)
+        {
+            DbHelper.ExecuteWithoutAnswer($"UPDATE {"HeroCurrentStats"} SET {"skillLvl"} = {lvl}, {"statvalue"} = {value.ToString(CultureInfo.InvariantCulture)} WHERE {"skillName"} = '{skillName}'");
+            DbHelper.ExecuteWithoutAnswer($"UPDATE {"HeroCurrentStats"} SET {"skillLvl"} = {HeroLvl.ToString(CultureInfo.InvariantCulture)}, {"statvalue"} = {HeroLvl.ToString(CultureInfo.InvariantCulture)} WHERE {"skillName"} = {"Lvl"}");
+        }
+        public void DbSetStats(string skillName, float value)
+        {
+            int lvl = int.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"skillLvl"} FROM {"HeroStats"} WHERE {"skillName"} = '{skillName}' AND {"statvalue"} = {value.ToString(CultureInfo.InvariantCulture)}"));
+            DbHelper.ExecuteWithoutAnswer($"UPDATE {"HeroCurrentStats"} SET {"skillLvl"} = {lvl}, {"statvalue"} = {value.ToString(CultureInfo.InvariantCulture)} WHERE {"skillName"} = '{skillName}'");
+        }
+        public float DbGetNextStatValue(string skillName, float statValue, float HeroLvl)
+        {
+            int lvl = int.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"skillLvl"} FROM {"HeroStats"} WHERE {"skillName"} = '{skillName}' AND {"statvalue"} = {statValue.ToString(CultureInfo.InvariantCulture)}"));
+            float nextval = float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroStats"} WHERE {"skillName"} = '{skillName}' AND {"skillLvl"} = {lvl + 1}"));
+            DbSetStats(skillName, lvl + 1, HeroLvl, nextval);
+            return nextval;
+        }
+        public float DbGetCurrentStatValue(string skillName)
+        {
+            return float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE {"skillName"} = '{skillName}'"));
+        }
+        public Dictionary<string, float> DbGetHeroStats()
+        {
+            Dictionary<string, float> dict = new Dictionary<string, float>();
+            dict.Add("Strength", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE {"skillName"} = {"'Strength'"}")));
+            dict.Add("MaxHp", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE {"skillName"} = {"'MaxHp'"}")));
+            dict.Add("MaxStamina", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE {"skillName"} = {"'MaxStamina'"}")));
+            dict.Add("MaxMana", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE {"skillName"} = {"'MaxMana'"}")));
+            dict.Add("CritChance", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE {"skillName"} = {"'CritChance'"}")));
+            dict.Add("CritDamage", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE {"skillName   "} = {"'CritDamage'"}")));
+            dict.Add("Speed", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE {"skillName"} = {"'Speed'"}")));
+            dict.Add("Intellegence", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE {"skillName"} = {"'Intellegence'"}")));
+            dict.Add("Haste", float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE {"skillName"} = {"'Haste'"}")));
+            dict.Add("Lvl", int.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT {"statvalue"} FROM {"HeroCurrentStats"} WHERE { "skillName"} = { "'Lvl'"}")));
+            return dict;
+        }
+    }
+    class UpgradeStat
+    {
+        public void Upgrade(string skillName, float statValue, MoneyHolder mh, GetValuesFromDB db, float lvl)
+        {
+            float cost = float.MaxValue;
+            try
+            {
+                cost = db.DbGetCost(lvl);
+            }
+            catch { }
+            if (mh.exp >= cost)
+            {
+                try
+                {
+                    statValue = db.DbGetNextStatValue(skillName, statValue, lvl);
+                    mh.DecreaseMoney(cost);
+                    //Console.WriteLine("upgrade sucssessfull");
+                }
+                catch
+                {
+                    //Debug.Log("MaxLvlReached");
+                }
+            }
+        }
+    }
+}
+
+
+
+
+
+using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace ForProj2
+{
+    class StorableInfo
+    {
+        //Вызывать это для генерации в бд
+        public void GenerateAllValuesForDB()
+        {
+            try
+            {
+                DbHelper.ExecuteWithoutAnswer("DROP TABLE HeroStats");
+            }
+            catch { }
+            DbHelper.ExecuteWithoutAnswer("CREATE TABLE HeroStats(skillName VARCHAR (128), skillLvl int, statvalue float, UpgradeCost float)");
+            //Добавил лвл
+            DbHelper.ExecuteWithoutAnswer("CREATE TABLE HeroLvl (Lvl int, UpgradeCost float)");
+            GenerateLvl(200, 10, 100);
+
+            GenerateValuesForDB("Strength",  5,  1, 50);
+            GenerateValuesForDB("MaxHP",  100,  10, 50);
+            GenerateValuesForDB("MaxStamina",  5,  1, 50);
+            GenerateValuesForDB("MaxMana",  100,  10, 50);
+            GenerateValuesForDB("Speed", 5,  1, 50);
+            GenerateValuesForDB("CritChance", 0.1f,  0.1f, 50);
+            GenerateValuesForDB("CritDamage", 1.5f,  0.1f, 50);
+            GenerateValuesForDB("Intellegence", 5,  1, 50);
+            GenerateValuesForDB("Haste", 5,  1, 50);
+        }
+
+        //consIncrease - увеличение стоимости в %
+        //valueIncrease - увеличение значения статистики в еденицах
+        public void GenerateValuesForDB(string skillName, float BaseValue,  float valueIncrease, float MaxLvl)
+        {
+            for (int i = 0; i < MaxLvl; i++)
+            {
+                if (i == 0)
+                {
+                    string BaseValues = BaseValue.ToString(CultureInfo.InvariantCulture);
+                    DbHelper.ExecuteWithoutAnswer($"INSERT INTO HeroStats VALUES('{skillName}', {i}, {BaseValues})");
+                }
+                else
+                {
+                    float curValue = float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT statvalue FROM HeroStats WHERE skillLvl = {i - 1} AND skillName = '{skillName}'"));
+                    //Тут формулы
+                    float value = curValue + valueIncrease - (i * BaseValue / 400);
+                    //
+                    string valueStr = value.ToString(CultureInfo.InvariantCulture);
+                    DbHelper.ExecuteWithoutAnswer($"INSERT INTO HeroStats VALUES('{skillName}', {i}, {valueStr})");
+                }
+            }
+        }
+        public void GenerateLvl(int maxLvl, float costIncreace, float baseCost)
+        {
+            for (int i = 0; i < maxLvl; i++)
+            {
+                DbHelper.ExecuteWithoutAnswer($"INSERT INTO HeroLvl VALUES({i}, {baseCost+(baseCost*costIncreace/100)})");
+            }
+        }
+    }
+}
