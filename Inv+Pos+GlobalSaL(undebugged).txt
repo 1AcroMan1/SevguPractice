@@ -1,0 +1,250 @@
+ static class GlobalSave
+    {
+        public static void Save(Position pos, Inventory inv)
+        {
+            //статы сохраняются сами по себе
+            pos.Save();
+            inv.Save();
+        }
+        public static Stats LoadStats()
+        {
+            Stats st = new Stats();
+            st.UpdateStats();
+            return st;
+        }
+        public static Position LoadPosition()
+        {
+            Position pos = new Position();
+            pos.Load();
+            return pos;
+        }
+        public static Inventory LoadInventory()
+        {
+            Inventory inv = new Inventory();
+            inv.Load();
+            return inv;
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+using System;
+using System.Collections.Generic;
+ class Inventory
+    {
+        public List<int> slotIds { get; private set; }
+        public List<int> itemIds { get; private set; }
+        public List<int> isEquiped { get; private set; }
+        public List<int> itemsAmmount { get; private set; }
+        private int baseSpace = 35;
+        public void Save()
+        {
+            InventoryDb.Save(slotIds, itemIds, isEquiped, itemsAmmount);
+        }
+        public void Load()
+        {
+            List<List<int>> list = InventoryDb.Load(baseSpace);
+            slotIds = list[0];
+            itemIds = list[1];
+            isEquiped = list[2];
+            itemsAmmount = list[3];
+        }
+        public void LoadSlot(int slotId)
+        {
+            List<int> list = InventoryDb.LoadSlot(slotId);
+            slotIds[slotId] = list[0];
+            itemIds[slotId] = list[1];
+            isEquiped[slotId] = list[2];
+            itemsAmmount[slotId] = list[3];
+        }
+        public void ChangeEquiped(int slotId, int prevSlot)
+        {
+            InventoryDb.ChangeEquiped(slotId, prevSlot);
+            LoadSlot(slotId);
+            LoadSlot(prevSlot);
+        }
+        public void ChangeSlot(int slotId, int itemId, int isEquiped, int itemsAmmount)
+        {
+            InventoryDb.ChangeSlot(slotId, itemId, isEquiped, itemsAmmount);
+            LoadSlot(slotId);
+        }
+    }
+    public static class InventoryDb
+    {
+        public static void Save(List<int> slotIds, List<int> itemIds, List<int> isEquiped, List<int> itemsAmmount)
+        {
+            if (CheckOnExist())
+            {
+                for (int i = 0; i < slotIds.Count; i++)
+                {
+                    DbHelper.ExecuteWithoutAnswer($"UPDATE Inventory SET SlotId = {slotIds[i]}, ItemId = {itemIds[i]}, IsEquiped = {bool.Parse(isEquiped[i].ToString())}, ItemsAmmount = {itemsAmmount[i]}");
+                }
+            }
+            else
+            {
+                ReGenerate(slotIds.Count);
+            }
+        }
+        public static List<List<int>> Load(int baseSpace)
+        {
+            if (CheckOnExist())
+            {
+                List<int> slotIds = new List<int>();
+                List<int> itemIds = new List<int>();
+                List<int> isEquiped = new List<int>();
+                List<int> itemsAmmount = new List<int>();
+                for (int i = 0; i<baseSpace;i++)
+                {
+                    slotIds.Add(i);
+                    itemIds.Add(int.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT ItemId FROM Inventory WHERE SlotId = {i}")));
+                    isEquiped.Add(int.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT IsEquiped FROM Inventory WHERE SlotId = {i}")));
+                    itemsAmmount.Add(int.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT ItemsAmmount FROM Inventory WHERE SlotId = {i}")));
+                }
+                return new List<List<int>>() {slotIds,itemIds,isEquiped,itemsAmmount};
+            }
+            else
+            {
+                ReGenerate(baseSpace);
+                return Load(baseSpace);
+            }
+        }
+        public static List<int> LoadSlot(int slotId)
+        {
+            List<int> list = new List<int>();
+            list.Add(slotId);
+            list.Add(int.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT ItemId FROM Inventory WHERE SlotId = {slotId}")));
+            list.Add(int.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT IsEquiped FROM Inventory WHERE SlotId = {slotId}")));
+            list.Add(int.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT ItemsAmmount FROM Inventory WHERE SlotId = {slotId}")));
+            return list;
+        }
+        public static bool CheckOnExist()
+        {
+            string ch = DbHelper.ExecuteQueryWithAnswer($"SELECT ItemId FROM Inventory WHERE SlotId = 0");
+            return ch != null;
+        }
+        public static void ReGenerate(int space)
+        {
+            try
+            {
+                DbHelper.ExecuteWithoutAnswer("DROP TABLE Inventory");
+                Console.WriteLine("inv deleted");
+            }
+            catch { }
+            DbHelper.ExecuteWithoutAnswer($"CREATE TABLE Inventory (SlotId int, ItemId int, IsEquiped bool, ItemsAmmount int)");
+            Console.WriteLine("inv created");
+            for (int i = 0; i<space;i++)
+            {
+                DbHelper.ExecuteWithoutAnswer($"INSERT INTO Inventory VALUES({i}, 0, false, 0)");
+            }
+        }
+        public static void ChangeEquiped(int slotId, int prevSlotId)
+        {
+            DbHelper.ExecuteWithoutAnswer($"UPDATE Inventory SET IsEquiped = false WHERE SlotId = {prevSlotId}");
+            DbHelper.ExecuteWithoutAnswer($"UPDATE Inventory SET IsEquiped = true WHERE SlotId = {slotId}");
+        }
+        public static void ChangeSlot(int slotId, int itemId, int isEquiped, int itemsAmmount)
+        {
+            DbHelper.ExecuteWithoutAnswer($"UPDATE Inventory SET SlotId = {slotId}, ItemId = {itemId}, IsEquiped = {bool.Parse(isEquiped.ToString())}, ItemsAmmount = {itemsAmmount}");
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+using System;
+using System.Collections.Generic;
+class Position
+    {
+        public float x { get; private set; }
+        public float y { get; private set; }
+        public float z { get; private set; }
+        public void Save()
+        {
+            PositionDb.Save(new List<float>() { x, y, z });
+        }
+        public void Load()
+        {
+            List<float> pos = PositionDb.Load();
+            x = pos[0];
+            y = pos[1];
+            z = pos[2];
+        }
+    }
+    static class PositionDb
+    {
+        public static void Save(List<float> pos)
+        {
+            if(CheckOnExist())
+            {
+                DbHelper.ExecuteWithoutAnswer($"UPDATE Position SET Cords = {pos[0]} WHERE Name = {"'x'"}");
+                DbHelper.ExecuteWithoutAnswer($"UPDATE Position SET Cords = {pos[1]} WHERE Name = {"'y'"}");
+                DbHelper.ExecuteWithoutAnswer($"UPDATE Position SET Cords = {pos[2]} WHERE Name = {"'z'"}");
+            }
+            else
+            {
+                ReGenerate();
+            }
+        }
+        public static List<float> Load()
+        {
+            if (CheckOnExist())
+            {
+                List<float> pos = new List<float>();
+                pos.Add(float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT Cords FROM Position WHERE Name = x")));
+                pos.Add(float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT Cords FROM Position WHERE Name = y")));
+                pos.Add(float.Parse(DbHelper.ExecuteQueryWithAnswer($"SELECT Cords FROM Position WHERE Name = z")));
+                return pos;
+            }
+            else
+            {
+                ReGenerate();
+                return Load();
+            }
+        }
+        public static bool CheckOnExist()
+        {
+            string ch = DbHelper.ExecuteQueryWithAnswer($"SELECT Cords FROM Position WHERE Name = x");
+            return ch != null;
+        }
+        public static void ReGenerate()
+        {
+            try
+            {
+                DbHelper.ExecuteWithoutAnswer("DROP TABLE Position");
+                Console.WriteLine("pos deleted");
+            }
+            catch { }
+            DbHelper.ExecuteWithoutAnswer($"CREATE TABLE Position (Name VARCHAR(2), Cords float)");
+            Console.WriteLine("pos created");
+            DbHelper.ExecuteWithoutAnswer($"INSERT INTO Position x, 0");
+            DbHelper.ExecuteWithoutAnswer($"INSERT INTO Position y, 0");
+            DbHelper.ExecuteWithoutAnswer($"INSERT INTO Position z, 0");
+        }
+    }
+
+
